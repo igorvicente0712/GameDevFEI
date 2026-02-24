@@ -1,20 +1,19 @@
 using UnityEngine;
-using UnityEngine.InputSystem;  // Novo Input System
 
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(CircleCollider2D))]
-public class PlayerBottomController : MonoBehaviour
+public class PlayerTopController : MonoBehaviour
 {
-    public Camera mainCamera;
+    public Transform puck;
 
     // Limites do CAMPO (bordas reais, sem compensar raio)
     public float fieldMinX;  // parede esquerda
     public float fieldMaxX;  // parede direita
-    public float fieldMinY;  // parede de baixo
-    public float fieldMaxY;  // linha do meio
+    public float fieldMinY;  // linha do meio
+    public float fieldMaxY;  // parede de cima
 
     public float margin = 0.0f;   // folguinha opcional
-    public float moveSpeed = 30f; // velocidade de resposta ao mouse
+    public float moveSpeed = 25f; // velocidade da IA
 
     private Rigidbody2D rb;
     private float radius;
@@ -27,16 +26,13 @@ public class PlayerBottomController : MonoBehaviour
 
     private void Start()
     {
-        if (mainCamera == null)
-            mainCamera = Camera.main;
-
         var col = GetComponent<CircleCollider2D>();
         radius = col.radius * Mathf.Max(transform.localScale.x, transform.localScale.y);
 
-        // Começa mirando na posição atual
+        // começa mirando na posição atual
         targetPosition = rb.position;
 
-        // Garantir boas configs de física na própria palheta
+        // configs físicas básicas
         rb.gravityScale = 0f;
         rb.linearDamping = 0f;
         rb.angularDamping = 0f;
@@ -45,36 +41,28 @@ public class PlayerBottomController : MonoBehaviour
 
     private void Update()
     {
-        if (mainCamera == null || Mouse.current == null)
+        if (puck == null)
             return;
 
-        // 1) Mouse em tela
-        Vector2 mousePos = Mouse.current.position.ReadValue();
-        Vector3 mouseScreenPos = new Vector3(mousePos.x, mousePos.y, 0f);
+        Vector3 puckPos = puck.position;
 
-        // 2) Mouse em mundo
-        Vector3 mouseWorldPos = mainCamera.ScreenToWorldPoint(mouseScreenPos);
+        float targetX = puckPos.x;
+        float targetY = puckPos.y;
 
-        float targetX = mouseWorldPos.x;
-        float targetY = mouseWorldPos.y;
-
-        // 3) Limites ajustados pelo raio + margem
+        // limites ajustados pelo raio + margem
         float minX = fieldMinX + radius + margin;
         float maxX = fieldMaxX - radius - margin;
         float minY = fieldMinY + radius + margin;
         float maxY = fieldMaxY - radius - margin;
 
-        // 4) Clamp
         float clampedX = Mathf.Clamp(targetX, minX, maxX);
         float clampedY = Mathf.Clamp(targetY, minY, maxY);
 
-        // Guardar para o FixedUpdate mover via física
         targetPosition = new Vector2(clampedX, clampedY);
     }
 
     private void FixedUpdate()
     {
-        // 5) Movimento físico suave em direção ao alvo
         Vector2 newPos = Vector2.MoveTowards(
             rb.position,
             targetPosition,
